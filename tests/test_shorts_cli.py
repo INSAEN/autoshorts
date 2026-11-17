@@ -267,3 +267,82 @@ def test_render_video_ffmpeg_codec_selection(tmp_path, monkeypatch):
     idx = cmd.index("-c:v")
     assert cmd[idx + 1] == "hevc_nvenc"
     assert "libx264" not in cmd
+
+
+def test_parse_args_with_url():
+    args = shorts.parse_args(["--url", "https://www.youtube.com/watch?v=dQw4w9WgXcQ"])
+    assert args.url == "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+
+
+def test_main_with_url_argument(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    mock_video = tmp_path / "gameplay" / "downloaded.mp4"
+    mock_video.parent.mkdir(parents=True, exist_ok=True)
+    mock_video.write_bytes(b"")
+
+    calls = []
+    download_calls = []
+
+    monkeypatch.setattr(
+        shorts,
+        "parse_args",
+        lambda: Namespace(
+            input=Path("gameplay"),
+            output=tmp_path / "generated",
+            url="https://youtu.be/dQw4w9WgXcQ",
+        ),
+    )
+    monkeypatch.setattr(shorts, "config_from_env", lambda: object())
+    monkeypatch.setattr(
+        shorts,
+        "download_video",
+        lambda url, output_dir: (download_calls.append(url), mock_video)[1],
+    )
+    monkeypatch.setattr(
+        shorts,
+        "process_video",
+        lambda video_file, config, out: calls.append((video_file, out)),
+    )
+
+    shorts.main()
+
+    assert download_calls == ["https://youtu.be/dQw4w9WgXcQ"]
+    assert calls == [(mock_video, tmp_path / "generated")]
+
+
+def test_main_with_url_as_input(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    mock_video = tmp_path / "gameplay" / "stream.mp4"
+    mock_video.parent.mkdir(parents=True, exist_ok=True)
+    mock_video.write_bytes(b"")
+
+    calls = []
+    download_calls = []
+
+    monkeypatch.setattr(
+        shorts,
+        "parse_args",
+        lambda: Namespace(
+            input=Path("https://www.youtube.com/watch?v=xyz123"),
+            output=tmp_path / "generated",
+            url=None,
+        ),
+    )
+    monkeypatch.setattr(shorts, "config_from_env", lambda: object())
+    monkeypatch.setattr(
+        shorts,
+        "download_video",
+        lambda url, output_dir: (download_calls.append(url), mock_video)[1],
+    )
+    monkeypatch.setattr(
+        shorts,
+        "process_video",
+        lambda video_file, config, out: calls.append((video_file, out)),
+    )
+
+    shorts.main()
+
+    assert len(download_calls) == 1
+    assert "youtube.com/watch?v=xyz123" in download_calls[0]
+    assert calls == [(mock_video, tmp_path / "generated")]
+

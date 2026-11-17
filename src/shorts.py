@@ -71,6 +71,7 @@ from ai_providers import (
     ClipScore,
     extract_candidate_clip,
 )
+from downloader import download_video, is_url
 from subtitle_generator import generate_subtitles, is_subtitles_enabled
 
 # Configure basic logging.
@@ -2627,7 +2628,15 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
         dest="input",
         type=Path,
         default=Path("gameplay"),
-        help="Video file or directory to process (default: gameplay).",
+        help="Video file, directory, or YouTube/web URL to process (default: gameplay).",
+    )
+    parser.add_argument(
+        "--url",
+        "-u",
+        dest="url",
+        type=str,
+        default=None,
+        help="Optional YouTube or web video URL to download and process directly.",
     )
     parser.add_argument(
         "--output",
@@ -2730,17 +2739,32 @@ def main() -> None:
     args = parse_args()
     config = config_from_env()
 
-    input_path = args.input
-    if not input_path.exists():
-        logging.warning("Input path '%s' does not exist. Exiting.", input_path)
-        return
+    # Check for direct URL argument or URL passed via --input
+    raw_url = getattr(args, "url", None) or (str(args.input) if is_url(args.input) else None)
+    if raw_url:
+        import re
+        target_url = re.sub(r"^(https?):/+", r"\1://", str(raw_url).strip().replace("\\", "/"))
+        logging.info("Detected web/YouTube URL input: %s", target_url)
+        gameplay_dir = Path("gameplay")
+        gameplay_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            downloaded_video = download_video(target_url, output_dir=gameplay_dir)
+            video_files = [downloaded_video]
+        except Exception as e:
+            logging.error("Failed to download video from URL '%s': %s", target_url, e)
+            return
+    else:
+        input_path = args.input
+        if not input_path.exists():
+            logging.warning("Input path '%s' does not exist. Exiting.", input_path)
+            return
 
-    video_files = discover_videos(input_path)
-    if not video_files:
-        logging.warning(
-            "No supported video files found at '%s'. Exiting.", input_path
-        )
-        return
+        video_files = discover_videos(input_path)
+        if not video_files:
+            logging.warning(
+                "No supported video files found at '%s'. Exiting.", input_path
+            )
+            return
 
     output_dir = args.output
     if output_dir.exists() and not output_dir.is_dir():

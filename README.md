@@ -63,9 +63,14 @@ corresponding API key, and set `DEBUG_SKIP_ANALYSIS=false` and
 
 ### Dashboard or CLI
 
-```nu
-# Dashboard: configure settings, add videos, and start processing
+```bash
+# Dashboard: configure settings, paste YouTube URLs or add videos, and start processing
 .venv/bin/python -m streamlit run src/dashboard/About.py
+
+# CLI: process a YouTube video or stream directly (auto-downloads with yt-dlp)
+.venv/bin/python run.py --input "https://www.youtube.com/watch?v=YOUR_VIDEO_ID"
+# or
+.venv/bin/python run.py --url "https://youtu.be/YOUR_VIDEO_ID"
 
 # CLI: read videos from gameplay/ and write clips to generated/
 .venv/bin/python run.py
@@ -74,9 +79,8 @@ corresponding API key, and set `DEBUG_SKIP_ANALYSIS=false` and
 .venv/bin/python run.py --input /path/to/videos --output /path/to/clips
 ```
 
-Use the dashboard's file picker or place source videos in `gameplay/`.
-Output clips are saved in `generated/`. `--input` accepts either a single
-supported video file or a directory; `--output` is created when needed.
+Paste a YouTube URL in the dashboard or use the file picker, or place source videos in `gameplay/`.
+Output clips are saved in `generated/`. `--input` accepts a YouTube/web URL, a local video file, or a directory.
 
 ## Configuration
 

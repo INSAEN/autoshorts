@@ -22,6 +22,7 @@ from dashboard.utils.config import load_env_values, save_env_values
 from dashboard.utils.process import build_process_env
 from dashboard.utils.theme import COLORS, get_shared_css
 from dashboard.utils.thumbnails import list_videos
+from downloader import download_video, is_url
 
 
 LOGO_PATH = Path("assets/logo.png")
@@ -113,6 +114,33 @@ def render() -> None:
                                 st.rerun()
                             except Exception as e:
                                 st.error(f"Failed to enable: {e}")
+
+        # YouTube & Web Video Ingestion
+        st.divider()
+        st.markdown("#### 🌐 Download YouTube Video or Stream")
+        col_url, col_dl = st.columns([3, 1])
+        with col_url:
+            yt_url_input = st.text_input(
+                "YouTube / Stream URL",
+                placeholder="https://www.youtube.com/watch?v=... or https://youtu.be/...",
+                key="gen_yt_url_input",
+                label_visibility="collapsed",
+            )
+        with col_dl:
+            dl_button = st.button("📥 Download", type="primary", key="btn_download_yt", width="stretch")
+
+        if dl_button:
+            if not yt_url_input or not is_url(yt_url_input):
+                st.error("Please enter a valid YouTube or video URL.")
+            else:
+                try:
+                    with st.spinner("Downloading video with yt-dlp..."):
+                        downloaded = download_video(yt_url_input, output_dir=gameplay_dir)
+                    st.toast(f"✅ Downloaded: {downloaded.name}")
+                    st.success(f"Added to queue: **{downloaded.name}**")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Download failed: {e}")
 
         # Action Buttons
         st.divider()

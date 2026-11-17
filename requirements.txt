@@ -9,6 +9,7 @@ random2==1.0.2
 soundfile==0.13.1
 tqdm
 torchcodec==0.10.0  # Matches the separately installed PyTorch 2.10
+yt-dlp>=2024.0.0
 
 # Decord - Video decoding library:
 #   GPU / CUDA build from source: make install_decord (or ./install.sh)

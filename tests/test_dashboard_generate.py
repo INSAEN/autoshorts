@@ -299,3 +299,37 @@ def test_env_round_trip_preserves_disabled_toggles(dashboard_env, raw):
     saved = dotenv_values(dashboard_env)
     assert saved["ENABLE_TTS"] == "false"
     assert saved["ENABLE_SUBTITLES"] == "false"
+
+
+def test_youtube_downloader_widget_renders(dashboard_env):
+    at = open_page(dashboard_env)
+    assert at.text_input(key="gen_yt_url_input") is not None
+    assert at.button(key="btn_download_yt") is not None
+
+
+def test_youtube_downloader_rejects_invalid_url(dashboard_env):
+    at = open_page(dashboard_env)
+    at.text_input(key="gen_yt_url_input").input("not-a-valid-url").run()
+    at.button(key="btn_download_yt").click().run()
+    assert not at.exception
+    assert any("valid YouTube or video URL" in err.value for err in at.error)
+
+
+def test_youtube_downloader_triggers_download(dashboard_env, monkeypatch):
+    at = open_page(dashboard_env)
+    download_calls = []
+    fake_downloaded = Path("gameplay/sample_stream.mp4")
+
+    from unittest.mock import MagicMock
+    import downloader
+    monkeypatch.setattr(
+        downloader,
+        "download_video",
+        lambda url, output_dir: (download_calls.append(url), fake_downloaded)[1],
+    )
+
+    at.text_input(key="gen_yt_url_input").input("https://www.youtube.com/watch?v=dQw4w9WgXcQ").run()
+    at.button(key="btn_download_yt").click().run()
+    assert not at.exception
+    assert download_calls == ["https://www.youtube.com/watch?v=dQw4w9WgXcQ"]
+
